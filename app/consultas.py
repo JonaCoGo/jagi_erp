@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from app.services.analisis_marca_service import get_analisis_marca
 from app.services.producto_service import get_consulta_producto
 from app.services.existencias_service import get_existencias_por_tienda
+from app.services.movimiento_service import get_movimiento
 from app.database import (
     get_connection,
     date_subtract_days,
@@ -484,45 +485,6 @@ def get_redistribucion_regional(dias=30, ventas_min=1, tienda_origen=None):
     return final
 
 #------------------------------------------------------ OTRAS FUNCIONES ------------------------------------------------------
-
-def get_movimiento(dias=30):
-
-    # ✅ Usar funciones helper
-    fecha_desde = date_subtract_days(dias)
-    fecha_col = date_format_convert('f_sistema')
-
-    query = f"""
-    WITH ventas_periodo AS (
-        SELECT 
-            c_barra,
-            d_almacen,
-            SUM(cn_venta) AS ventas_periodo
-        FROM ventas_historico_raw
-        WHERE {fecha_col} >= {fecha_desde}
-        GROUP BY c_barra, d_almacen
-    )
-    SELECT 
-        t.clean_name AS tienda,
-        s.c_barra,
-        s.d_marca,
-        s.saldo_disponible AS stock_actual,
-        COALESCE(v.ventas_periodo, 0) AS ventas_periodo,
-        CASE 
-            WHEN COALESCE(v.ventas_periodo, 0) > 0 THEN 'EN MOVIMIENTO'
-            ELSE 'SIN MOVIMIENTO'
-        END AS estado,
-        t.region,
-        t.tipo_tienda,
-        t.fija
-    FROM ventas_saldos_raw s
-    LEFT JOIN ventas_periodo v
-        ON s.c_barra = v.c_barra AND s.d_almacen = v.d_almacen
-    LEFT JOIN config_tiendas t
-        ON s.d_almacen = t.raw_name
-    ORDER BY t.clean_name, s.d_marca;
-    """
-    with get_connection() as conn:
-        return pd.read_sql(query, conn)
 
 def get_resumen_movimiento(dias=30):
     df = get_movimiento(dias)
