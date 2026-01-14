@@ -10,4 +10,17 @@ def get_movimiento(dias=30):
     with get_connection() as conn:
         return repo.fetch_movimiento(conn, fecha_col, fecha_desde)
     
-    
+
+def get_resumen_movimiento(dias=30):
+    df = get_movimiento(dias)
+
+    resumen = (
+        df.groupby(["tienda", "estado"])
+        .agg(
+            productos=("c_barra", "count"),
+            stock_total=("stock_actual", "sum")
+        )
+        .reset_index()
+    )
+
+    return resumen

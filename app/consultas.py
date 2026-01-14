@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from app.services.analisis_marca_service import get_analisis_marca
 from app.services.producto_service import get_consulta_producto
 from app.services.existencias_service import get_existencias_por_tienda
-from app.services.movimiento_service import get_movimiento
+from app.services.movimiento_service import get_movimiento, get_resumen_movimiento
 from app.database import (
     get_connection,
     date_subtract_days,
@@ -485,15 +485,6 @@ def get_redistribucion_regional(dias=30, ventas_min=1, tienda_origen=None):
     return final
 
 #------------------------------------------------------ OTRAS FUNCIONES ------------------------------------------------------
-
-def get_resumen_movimiento(dias=30):
-    df = get_movimiento(dias)
-    resumen = (
-        df.groupby(["tienda", "estado"])
-        .agg(productos=("c_barra", "count"), stock_total=("stock_actual", "sum"))
-        .reset_index()
-    )
-    return resumen
 
 def get_faltantes(dias=90):
     with get_connection() as conn:
