@@ -1,0 +1,961 @@
+/* styles.css */
+/* ========================================
+   ESTILOS PERSONALIZADOS JAGI ERP
+   ======================================== */
+
+/* ==========================================
+   1. ANIMACIONES
+   ========================================== */
+
+/* Animación para notificaciones */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Animación de carga (spinner) */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading {
+    animation: spin 1s linear infinite;
+}
+
+/* Animación de pulso para estadísticas */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Animación de fade in */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+
+/* ==========================================
+   2. MODAL
+   ========================================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+
+/* ==========================================
+   3. TABLAS
+   ========================================== */
+
+.table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Estilos base de tabla */
+table {
+    font-size: 0.875rem;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+/* Headers pegajosos */
+th {
+    position: sticky;
+    top: 0;
+    background: #f3f4f6;
+    z-index: 10;
+    font-weight: 600;
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Hover en filas */
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Filas alternadas */
+tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+/* Scrollbar personalizado para tablas */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+
+/* ==========================================
+   4. NAVEGACIÓN
+   ========================================== */
+
+.nav-btn {
+    transition: all 0.3s ease;
+    border-bottom: 4px solid transparent;
+}
+
+.nav-btn:hover {
+    background-color: #f3f4f6;
+}
+
+.nav-btn.active {
+    border-bottom-color: #2563eb;
+    color: #2563eb;
+}
+
+
+/* ==========================================
+   5. TARJETAS Y CONTENEDORES
+   ========================================== */
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Contenido de módulos */
+.module-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+
+/* ==========================================
+   6. BOTONES
+   ========================================== */
+
+button {
+    transition: all 0.2s ease;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ==========================================
+   7. INPUTS Y FORMULARIOS
+   ========================================== */
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+    transition: all 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Estilo para inputs de archivo */
+input[type="file"] {
+    cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+    background-color: #2563eb;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    margin-right: 1rem;
+    transition: background-color 0.2s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: #1d4ed8;
+}
+
+
+/* ==========================================
+   8. SISTEMA DE NOTIFICACIONES
+   ========================================== */
+
+#notifications {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 400px;
+}
+
+.notification {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 300px;
+}
+
+.notification.success {
+    background-color: #10b981;
+    color: white;
+}
+
+.notification.error {
+    background-color: #ef4444;
+    color: white;
+}
+
+.notification.warning {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.notification.info {
+    background-color: #3b82f6;
+    color: white;
+}
+
+
+/* ==========================================
+   9. ESTADÍSTICAS Y MÉTRICAS
+   ========================================== */
+
+.stat-card {
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+
+/* ==========================================
+   10. PAGINACIÓN
+   ========================================== */
+
+#pagination button {
+    transition: all 0.2s ease;
+}
+
+#pagination button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+
+/* ==========================================
+   11. DRAG AND DROP ZONES
+   ========================================== */
+
+.drop-zone {
+    transition: all 0.3s ease;
+}
+
+.drop-zone:hover {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+}
+
+.drop-zone.active {
+    border-color: #10b981;
+    background-color: #d1fae5;
+}
+
+
+/* ==========================================
+   12. LOADING STATES
+   ========================================== */
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        #f0f0f0 25%,
+        #e0e0e0 50%,
+        #f0f0f0 75%
+    );
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+
+/* ==========================================
+   13. BADGES Y ETIQUETAS
+   ========================================== */
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.badge-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+
+/* ==========================================
+   14. TOOLTIPS (opcional para futuro)
+   ========================================== */
+
+.tooltip {
+    position: relative;
+}
+
+.tooltip::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem;
+    background-color: #1f2937;
+    color: white;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.tooltip:hover::before {
+    opacity: 1;
+}
+
+
+/* ==========================================
+   15. RESPONSIVE
+   ========================================== */
+
+@media (max-width: 768px) {
+    /* Ajustes para móviles */
+    .modal {
+        padding: 1rem;
+    }
+    
+    .table-container {
+        max-height: 400px;
+    }
+    
+    #notifications {
+        right: 0.5rem;
+        left: 0.5rem;
+        max-width: none;
+    }
+    
+    .notification {
+        min-width: auto;
+    }
+    
+    /* Hacer scroll horizontal en tablas en móvil */
+    table {
+        font-size: 0.75rem;
+    }
+    
+    th, td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    /* Ajustes para pantallas muy pequeñas */
+    .stat-number {
+        font-size: 1.5rem;
+    }
+}
+
+
+/* ==========================================
+   16. PRINT STYLES (para reportes)
+   ========================================== */
+
+@media print {
+    /* Ocultar elementos no necesarios en impresión */
+    .nav-btn,
+    button,
+    #notifications,
+    .modal {
+        display: none !important;
+    }
+    
+    /* Optimizar tablas para impresión */
+    table {
+        page-break-inside: auto;
+    }
+    
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    
+    thead {
+        display: table-header-group;
+    }
+}
+
+
+/* ==========================================
+   17. UTILIDADES PERSONALIZADAS
+   ========================================== */
+
+/* Texto truncado con ellipsis */
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Estado de carga */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+/* Transiciones suaves para todo */
+* {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ==========================================
+   18. ACCESIBILIDAD
+   ========================================== */
+
+/* Mejorar focus visible para teclado */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* Mejorar contraste en modo oscuro (futuro) */
+@media (prefers-color-scheme: dark) {
+    /* Preparado para modo oscuro si lo implementas después */
+}
+
+/* Reducir animaciones si el usuario lo prefiere */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ==========================================
+   19. ESTILOS PARA FILTROS AVANZADOS
+   ========================================== */
+
+/* Pestañas */
+.tab-filtros {
+    position: relative;
+    overflow: hidden;
+}
+
+.tab-filtros::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: transparent;
+    transition: background 0.3s ease;
+}
+
+.tab-filtros.active::before {
+    background: #2563eb;
+}
+
+/* Transición suave de contenido */
+.contenido-pestana {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Checkboxes personalizados */
+input[type="checkbox"] {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+    accent-color: #2563eb;
+}
+
+input[type="checkbox"]:hover {
+    transform: scale(1.1);
+}
+
+/* Scrollbar personalizado para listas de filtros */
+#listaTiendasFiltro::-webkit-scrollbar,
+#listaObservacionesFiltro::-webkit-scrollbar,
+#listaSelectorColumnas::-webkit-scrollbar {
+    width: 6px;
+}
+
+#listaTiendasFiltro::-webkit-scrollbar-track,
+#listaObservacionesFiltro::-webkit-scrollbar-track,
+#listaSelectorColumnas::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#listaTiendasFiltro::-webkit-scrollbar-thumb,
+#listaObservacionesFiltro::-webkit-scrollbar-thumb,
+#listaSelectorColumnas::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+#listaTiendasFiltro::-webkit-scrollbar-thumb:hover,
+#listaObservacionesFiltro::-webkit-scrollbar-thumb:hover,
+#listaSelectorColumnas::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Hover effects para opciones */
+#listaTiendasFiltro > div:hover,
+#listaObservacionesFiltro > div:hover,
+#listaSelectorColumnas > div:hover {
+    background-color: #f8fafc;
+    transform: translateX(2px);
+}
+
+/* Preview filtrado */
+#previewFiltrado {
+    min-height: 200px;
+    transition: all 0.3s ease;
+}
+
+/* Animación de loading para preview */
+.loading-preview {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-preview::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.5),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    to {
+        left: 100%;
+    }
+}
+
+/* Badges de columnas en resumen */
+#contenidoResumen .inline-block {
+    transition: all 0.2s ease;
+}
+
+#contenidoResumen .inline-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Botones de navegación */
+#btnAtras,
+#btnSiguiente,
+#btnExportar {
+    transition: all 0.3s ease;
+}
+
+#btnAtras:hover,
+#btnSiguiente:hover,
+#btnExportar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#btnAtras:active,
+#btnSiguiente:active,
+#btnExportar:active {
+    transform: translateY(0);
+}
+
+/* Indicadores visuales de completitud en pestañas */
+.tab-filtros::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-filtros.completed::after {
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    #listaSelectorColumnas {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .grid.grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    #listaSelectorColumnas {
+        grid-template-columns: 1fr;
+    }
+    
+    .tab-filtros {
+        font-size: 0.875rem;
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Estados de carga */
+.skeleton-loader {
+    background: linear-gradient(
+        90deg,
+        #f0f0f0 25%,
+        #e0e0e0 50%,
+        #f0f0f0 75%
+    );
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+/* Mejoras de accesibilidad */
+.tab-filtros:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+
+input[type="checkbox"]:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* Tooltips para botones (opcional) */
+button[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* ==========================================
+   20. PREVIEW DE COLUMNAS SELECCIONADAS
+   ========================================== */
+
+/* Container del preview */
+#previewColumnasSeleccionadas {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+/* Tabla del preview */
+#previewColumnasSeleccionadas table {
+    font-size: 0.75rem;
+    min-width: 100%;
+}
+
+/* Headers de la tabla */
+#previewColumnasSeleccionadas thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Scroll horizontal suave */
+#previewColumnasSeleccionadas .overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: 300px;
+}
+
+/* Scrollbar personalizado para preview */
+#previewColumnasSeleccionadas .overflow-x-auto::-webkit-scrollbar {
+    height: 8px;
+}
+
+#previewColumnasSeleccionadas .overflow-x-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+#previewColumnasSeleccionadas .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 4px;
+}
+
+#previewColumnasSeleccionadas .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+}
+
+/* Efecto hover en filas */
+#previewColumnasSeleccionadas tbody tr {
+    transition: all 0.2s ease;
+}
+
+#previewColumnasSeleccionadas tbody tr:hover {
+    transform: scale(1.01);
+}
+
+/* Celdas */
+#previewColumnasSeleccionadas td {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Efecto de aparición suave */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estado vacío (sin columnas seleccionadas) */
+#previewColumnasSeleccionadas .border-dashed {
+    transition: all 0.3s ease;
+}
+
+#previewColumnasSeleccionadas .border-dashed:hover {
+    border-color: #93c5fd;
+    background-color: #eff6ff;
+}
+
+/* Destacar el tip */
+#previewColumnasSeleccionadas strong {
+    color: #1e40af;
+}
+
+/* Responsive: ajustar altura en pantallas pequeñas */
+@media (max-height: 768px) {
+    #previewColumnasSeleccionadas .overflow-x-auto {
+        max-height: 200px;
+    }
+}
+
+/* Indicador de scroll (sombras) */
+#previewColumnasSeleccionadas .overflow-x-auto {
+    position: relative;
+}
+
+#previewColumnasSeleccionadas .overflow-x-auto::before,
+#previewColumnasSeleccionadas .overflow-x-auto::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 5;
+    transition: opacity 0.3s ease;
+}
+
+#previewColumnasSeleccionadas .overflow-x-auto::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(255,255,255,0.9), transparent);
+}
+
+#previewColumnasSeleccionadas .overflow-x-auto::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+}
+
+/* Animación al actualizar preview */
+#previewColumnasSeleccionadas.actualizando {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Badge para número de columnas */
+#previewColumnasSeleccionadas .text-blue-600 {
+    background: #dbeafe;
+    padding: 2px 6px;
+    border-radius: 4px;
+}

@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAGI ERP - Sistema de Reabastecimiento</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- CSS personalizado -->
+    <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Notificaciones -->
+    <div id="notifications" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Modal para Vista Previa -->
+    <div id="previewModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <h3 id="modalTitle" class="text-xl font-bold">Vista Previa</h3>
+                <button onclick="cerrarModal()" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            <!-- Sección de filtros para reportes (oculta por defecto) -->
+            <div id="filtros-seccion" class="hidden p-4 border-b bg-gray-50">
+                <h4 class="font-semibold mb-3">Filtros de Búsqueda</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Tienda</label>
+                        <select id="filtro-tienda" class="w-full p-2 border rounded">
+                            <option value="">Todas las tiendas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Marca</label>
+                        <select id="filtro-marca" class="w-full p-2 border rounded">
+                            <option value="">Todas las marcas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Región</label>
+                        <select id="filtro-region" class="w-full p-2 border rounded">
+                            <option value="">Todas las regiones</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Días sin venta</label>
+                        <input type="number" id="filtro-dias" class="w-full p-2 border rounded" value="90">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Stock Mínimo</label>
+                        <input type="number" id="filtro-stock-min" class="w-full p-2 border rounded" value="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Stock Máximo</label>
+                        <input type="number" id="filtro-stock-max" class="w-full p-2 border rounded" value="999999">
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="generarReporteConFiltros('existencias')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        👁️ Ver Preview
+                    </button>
+                    <button onclick="generarReporteDirecto('existencias')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        📥 Exportar
+                    </button>
+                </div>
+            </div>
+            <!-- Sección normal de tabla (visible por defecto) -->
+            <div id="tabla-seccion">
+                <div class="p-4 border-b flex gap-4">
+                    <input type="text" id="searchTable" placeholder="🔍 Buscar..." class="flex-1 p-2 border rounded">
+                    <select id="filterColumn" class="p-2 border rounded">
+                        <option value="">Todas las columnas</option>
+                    </select>
+                    <button onclick="generarReabastecimientoDirecto()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 flex items-center gap-2">
+                        📥 Exportar Excel
+                    </button>
+
+                </div>
+                <div class="flex-1 overflow-auto p-4">
+                    <div id="previewStats" class="mb-4 grid grid-cols-4 gap-4"></div>
+                    <div class="table-container">
+                        <table id="previewTable" class="w-full border-collapse border">
+                            <thead id="previewTableHead"></thead>
+                            <tbody id="previewTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="p-4 border-t flex justify-between items-center bg-gray-50">
+                    <span id="recordCount" class="text-sm text-gray-600"></span>
+                    <div id="pagination" class="flex gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Selector de Columnas -->
+    <div id="modalSelectorColumnas" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold">📋 Seleccionar Columnas para Exportar</h3>
+                <button onclick="cerrarModalColumnas()" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            
+            <!-- Body -->
+            <div class="flex-1 overflow-auto p-6">
+                <!-- Controles superiores -->
+                <div class="flex justify-between items-center mb-4 pb-3 border-b">
+                    <p id="contadorColumnas" class="text-sm font-medium text-gray-700">
+                        0 de 0 columnas seleccionadas
+                    </p>
+                    <div class="flex gap-2">
+                        <button 
+                            onclick="toggleTodasColumnas(true)" 
+                            class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                        >
+                            ✓ Seleccionar Todas
+                        </button>
+                        <button 
+                            onclick="toggleTodasColumnas(false)" 
+                            class="bg-gray-400 text-white px-3 py-1 rounded text-sm hover:bg-gray-500"
+                        >
+                            ✗ Deseleccionar Todas
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Lista de columnas con checkboxes -->
+                <div id="listaColumnasSelector" class="space-y-1 max-h-96 overflow-y-auto">
+                    <!-- Se llena dinámicamente con JavaScript -->
+                </div>
+                
+                <!-- Mensaje informativo -->
+                <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 text-sm text-blue-700 rounded">
+                    💡 <strong>Tip:</strong> Selecciona solo las columnas que necesites para hacer el reporte más limpio y fácil de leer.
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="p-4 border-t bg-gray-50 flex gap-3">
+                <button 
+                    onclick="confirmarYExportar()" 
+                    class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                >
+                    📥 Exportar con Columnas Seleccionadas
+                </button>
+                <button 
+                    onclick="cerrarModalColumnas()" 
+                    class="px-6 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400 transition"
+                >
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Filtros Avanzados con Pestañas -->
+    <div id="modalFiltrosAvanzados" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex justify-between items-center">
+                <div>
+                    <h3 class="text-2xl font-bold">📋 Personalizar Exportación</h3>
+                    <p class="text-blue-100 text-sm mt-1">Configura filtros, columnas y genera tu reporte personalizado</p>
+                </div>
+                <button onclick="cerrarModalFiltrosAvanzados()" class="text-white hover:text-gray-200 text-3xl font-light transition">&times;</button>
+            </div>
+            
+            <!-- Pestañas -->
+            <div class="flex border-b bg-gray-50">
+                <button 
+                    onclick="cambiarPestanaFiltros('filtros')" 
+                    data-tab="filtros"
+                    class="tab-filtros flex-1 px-6 py-4 font-medium border-b-4 border-blue-600 text-blue-600 transition-all hover:bg-gray-100"
+                >
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-xl">🔍</span>
+                        <span>Filtros de Datos</span>
+                    </div>
+                </button>
+                <button 
+                    onclick="cambiarPestanaFiltros('columnas')" 
+                    data-tab="columnas"
+                    class="tab-filtros flex-1 px-6 py-4 font-medium text-gray-600 transition-all hover:bg-gray-100"
+                >
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-xl">📋</span>
+                        <span>Selección de Columnas</span>
+                    </div>
+                </button>
+                <button 
+                    onclick="cambiarPestanaFiltros('resumen')" 
+                    data-tab="resumen"
+                    class="tab-filtros flex-1 px-6 py-4 font-medium text-gray-600 transition-all hover:bg-gray-100"
+                >
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-xl">✅</span>
+                        <span>Resumen</span>
+                    </div>
+                </button>
+            </div>
+            
+            <!-- Contenido de Pestañas -->
+            <div class="flex-1 overflow-auto p-6">
+                <!-- PESTAÑA 1: FILTROS DE DATOS -->
+                <div id="pestana-filtros" class="contenido-pestana">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- Filtro de Tiendas -->
+                        <div class="border rounded-lg p-4 bg-gray-50">
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b">
+                                <h4 class="font-semibold text-gray-800 flex items-center gap-2">
+                                    <span>🏪</span> Tiendas
+                                </h4>
+                                <p id="contadorTiendas" class="text-sm text-gray-600">0 de 0</p>
+                            </div>
+                            <div class="flex gap-2 mb-3">
+                                <button 
+                                    onclick="toggleTodasTiendas(true)" 
+                                    class="flex-1 bg-green-500 text-white px-3 py-1.5 rounded text-sm hover:bg-green-600 transition"
+                                >
+                                    ✓ Todas
+                                </button>
+                                <button 
+                                    onclick="toggleTodasTiendas(false)" 
+                                    class="flex-1 bg-gray-400 text-white px-3 py-1.5 rounded text-sm hover:bg-gray-500 transition"
+                                >
+                                    ✗ Ninguna
+                                </button>
+                            </div>
+                            <div id="listaTiendasFiltro" class="space-y-1 max-h-60 overflow-y-auto">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+                        
+                        <!-- Filtro de Observaciones -->
+                        <div class="border rounded-lg p-4 bg-gray-50">
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b">
+                                <h4 class="font-semibold text-gray-800 flex items-center gap-2">
+                                    <span>📊</span> Observaciones
+                                </h4>
+                                <p id="contadorObservaciones" class="text-sm text-gray-600">0 de 0</p>
+                            </div>
+                            <div class="flex gap-2 mb-3">
+                                <button 
+                                    onclick="toggleTodasObservaciones(true)" 
+                                    class="flex-1 bg-green-500 text-white px-3 py-1.5 rounded text-sm hover:bg-green-600 transition"
+                                >
+                                    ✓ Todas
+                                </button>
+                                <button 
+                                    onclick="toggleTodasObservaciones(false)" 
+                                    class="flex-1 bg-gray-400 text-white px-3 py-1.5 rounded text-sm hover:bg-gray-500 transition"
+                                >
+                                    ✗ Ninguna
+                                </button>
+                            </div>
+                            <div id="listaObservacionesFiltro" class="space-y-1 max-h-60 overflow-y-auto">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Filtrado -->
+                    <div class="border-t pt-4">
+                        <h4 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                            <span>👁️</span> Vista Previa (primeras 5 filas)
+                        </h4>
+                        <div id="previewFiltrado" class="bg-white border rounded-lg p-4">
+                            <div class="text-center text-gray-500">Selecciona filtros para ver preview...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PESTAÑA 2: SELECCIÓN DE COLUMNAS -->
+                <div id="pestana-columnas" class="contenido-pestana hidden">
+                    <!-- Controles superiores -->
+                    <div class="mb-4 flex justify-between items-center">
+                        <p id="contadorColumnas" class="text-sm font-medium text-gray-700">
+                            0 de 0 columnas
+                        </p>
+                        <div class="flex gap-2">
+                            <button 
+                                onclick="toggleTodasColumnasAvanzado(true)" 
+                                class="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600 transition"
+                            >
+                                ✓ Seleccionar Todas
+                            </button>
+                            <button 
+                                onclick="toggleTodasColumnasAvanzado(false)" 
+                                class="bg-gray-400 text-white px-4 py-2 rounded text-sm hover:bg-gray-500 transition"
+                            >
+                                ✗ Deseleccionar Todas
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de checkboxes de columnas -->
+                    <div id="listaSelectorColumnas" class="grid grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-4 bg-gray-50 rounded-lg border mb-6">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    
+                    <!-- Tip informativo -->
+                    <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 text-sm text-blue-800 rounded">
+                        💡 <strong>Tip:</strong> Selecciona solo las columnas esenciales para hacer el reporte más limpio y profesional.
+                    </div>
+                    
+                    <!-- ========================================== -->
+                    <!-- Preview de Columnas Seleccionadas -->
+                    <!-- ========================================== -->
+                    <div id="previewColumnasSeleccionadas">
+                        <!-- Se llena dinámicamente con la tabla de preview -->
+                        <div class="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                            <div class="text-4xl mb-2">📋</div>
+                            <p class="font-medium">Selecciona columnas para ver el preview</p>
+                            <p class="text-sm mt-1">El preview mostrará cómo se verá tu Excel</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PESTAÑA 3: RESUMEN -->
+                <div id="pestana-resumen" class="contenido-pestana hidden">
+                    <div id="contenidoResumen">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer con Navegación -->
+            <div class="p-6 border-t bg-gray-50 flex gap-3 justify-between">
+                <button 
+                    id="btnAtras"
+                    onclick="irPestanaAnterior()" 
+                    class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition hidden"
+                >
+                    ← Atrás
+                </button>
+                
+                <div class="flex-1"></div>
+                
+                <button 
+                    onclick="cerrarModalFiltrosAvanzados()" 
+                    class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition"
+                >
+                    Cancelar
+                </button>
+                
+                <button 
+                    id="btnSiguiente"
+                    onclick="irPestanaSiguiente()" 
+                    class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg"
+                >
+                    Siguiente →
+                </button>
+                
+                <button 
+                    id="btnExportar"
+                    onclick="exportarConFiltrosAvanzados()" 
+                    class="px-8 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition shadow-lg hidden"
+                >
+                    📥 Exportar Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">JAGI ERP</h1>
+                <p class="text-blue-100">Sistema de Reabastecimiento y Distribución</p>
+            </div>
+            <div class="text-right text-sm">
+                <p id="currentDate"></p>
+                <p class="text-blue-200">v2.0 - Proyecto Técnico</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="bg-white shadow-md sticky top-0 z-40">
+        <div class="container mx-auto">
+            <div class="flex overflow-x-auto">
+                <button onclick="showModule('dashboard')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap border-b-4" data-module="dashboard">
+                    🏠 Dashboard
+                </button>
+                <button onclick="showModule('carga')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="carga">
+                    📁 Datos
+                </button>
+                <button onclick="showModule('reabastecimiento')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="reabastecimiento">
+                    🔄 Reabastecimiento
+                </button>
+                <button onclick="showModule('redistribucion')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="redistribucion">
+                    ⇄ Redistribución
+                </button>
+                <button onclick="showModule('consulta')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="consulta">
+                    🔍 Consulta Producto
+                </button>
+                <button onclick="showModule('analisis-marca')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="analisis-marca">
+                    🏷️ Análisis Marca
+                </button>
+                <button onclick="showModule('reportes')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="reportes">
+                    📊 Reportes
+                </button>
+                <button onclick="showModule('analytics')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="analytics">
+                    📈 Analytics
+                </button>
+                <button onclick="showModule('configuracion')" class="nav-btn px-6 py-4 font-medium whitespace-nowrap" data-module="configuracion">
+                    ⚙️ Configuración
+                </button>
+            </div>  
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="container mx-auto p-6">
+        <!-- Dashboard -->
+        <div id="module-dashboard" class="module-content">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500 hover:shadow-lg transition">
+                    <p class="text-sm text-blue-600 font-medium">Total Productos</p>
+                    <p id="stat-productos" class="text-3xl font-bold text-blue-700 pulse">-</p>
+                    <p class="text-xs text-blue-500 mt-2">Códigos únicos en sistema</p>
+                </div>
+                <div class="bg-green-50 p-6 rounded-lg border-l-4 border-green-500 hover:shadow-lg transition">
+                    <p class="text-sm text-green-600 font-medium">Tiendas Activas</p>
+                    <p id="stat-tiendas" class="text-3xl font-bold text-green-700 pulse">-</p>
+                    <p class="text-xs text-green-500 mt-2">Puntos de venta operativos</p>
+                </div>
+                <div class="bg-orange-50 p-6 rounded-lg border-l-4 border-orange-500 hover:shadow-lg transition">
+                    <p class="text-sm text-orange-600 font-medium">Reabastecer</p>
+                    <p id="stat-reabastecer" class="text-3xl font-bold text-orange-700 pulse">-</p>
+                    <p class="text-xs text-orange-500 mt-2">Con stock bajo</p>
+                </div>
+                <div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500 hover:shadow-lg transition">
+                    <p class="text-sm text-purple-600 font-medium">Redistribuir</p>
+                    <p id="stat-redistribuir" class="text-3xl font-bold text-purple-700 pulse">-</p>
+                    <p class="text-xs text-purple-500 mt-2">Oportunidades detectadas</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span>📊</span> Estado del Sistema
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <span class="text-sm font-medium">Base de datos</span>
+                            <span id="status-bd" class="text-gray-500">⏳</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <span class="text-sm font-medium">Servidor backend</span>
+                            <span id="status-server" class="text-gray-500">⏳</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-blue-50 rounded">
+                            <span class="text-sm font-medium">Base de datos</span>
+                            <span class="text-xs text-blue-600">jagi_mahalo.db</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded">
+                            <span class="text-sm font-medium">Última actualización</span>
+                            <span id="lastUpdate" class="text-xs text-green-600">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-lg text-white shadow-lg">
+                    <h3 class="text-xl font-bold mb-3">🎓 Proyecto de Grado</h3>
+                    <p class="text-blue-100 mb-3">Sistema ERP de Reabastecimiento Inteligente</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span>✓</span>
+                            <span>Gestión automática de inventarios</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>✓</span>
+                            <span>Análisis predictivo de demanda</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>✓</span>
+                            <span>Optimización de distribución</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>✓</span>
+                            <span>Reportería avanzada</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-4">🚀 Accesos Rápidos</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="showModule('carga')" class="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition text-center">
+                        <div class="text-3xl mb-2">📁</div>
+                        <div class="text-sm font-medium">Cargar Datos</div>
+                    </button>
+                    <button onclick="showModule('reabastecimiento')" class="p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition text-center">
+                        <div class="text-3xl mb-2">🔄</div>
+                        <div class="text-sm font-medium">Reabastecer</div>
+                    </button>
+                    <button onclick="showModule('redistribucion')" class="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition text-center">
+                        <div class="text-3xl mb-2">⇄</div>
+                        <div class="text-sm font-medium">Redistribuir</div>
+                    </button>
+                    <button onclick="showModule('analytics')" class="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition text-center">
+                        <div class="text-3xl mb-2">📈</div>
+                        <div class="text-sm font-medium">Analytics</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Carga de Datos -->
+        <div id="module-carga" class="module-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>📁</span> Cargar Datos Semanales
+                    </h3>
+                    <p class="text-gray-600 mb-4 text-sm">Archivos CSV del sistema Mahalo (lunes)</p>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition mb-4">
+                        <input type="file" id="csvFiles" multiple accept=".csv" class="mb-2 text-sm">
+                        <p class="text-xs text-gray-500">
+                            • 1.Ventas-Saldos.csv<br>
+                            • 2.Inventario-Bodega.csv<br>
+                            • 3.Ventas-Historico.csv
+                        </p>
+                    </div>
+                    <button onclick="cargarCSV()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                        📥 Cargar CSVs
+                    </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>💾</span> Inventario Físico
+                    </h3>
+                    <p class="text-gray-600 mb-4 text-sm">Actualización desde conteo físico de bodega</p>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-green-400 transition mb-4">
+                        <input type="file" id="inventarioFile" accept=".xlsx,.xls" class="mb-2 text-sm">
+                        <p class="text-xs text-gray-500">
+                            Columnas requeridas:<br>
+                            • producto_id<br>
+                            • cantidad_fisica
+                        </p>
+                    </div>
+                    <button onclick="actualizarInventario()" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition">
+                        🔄 Actualizar Inventario
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Reabastecimiento -->
+        <div id="module-reabastecimiento" class="module-content hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h3 class="text-xl font-semibold mb-4">🔄 Configuración de Reabastecimiento</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Días para Reabastecimiento</label>
+                        <input type="number" id="diasReab" value="10" min="1" max="90" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Días para Expansión</label>
+                        <input type="number" id="diasExp" value="60" min="1" max="365" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Ventas Mínimas Expansión</label>
+                        <input type="number" id="ventasMinExp" value="3" min="1" max="100" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 mt-6 cursor-pointer">
+                            <input type="checkbox" id="soloVentas" class="w-4 h-4">
+                            <span class="text-sm font-medium">Solo productos con ventas</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Sección de Nuevos Lanzamientos -->
+                <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">🚀 Nuevos Lanzamientos</h3>
+                        <span class="text-sm text-gray-500">Productos nuevos para todas las tiendas</span>
+                    </div>
+                    
+                    <!-- Formulario de búsqueda/agregar -->
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4 bg-gray-50">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Código de Barras <span class="text-red-500">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="lanzamiento-codigo" 
+                                    placeholder="Ej: 770123456789"
+                                    class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    onblur="validarCodigoLanzamiento()"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Marca</label>
+                                <input 
+                                    type="text" 
+                                    id="lanzamiento-marca" 
+                                    placeholder="Se autocompleta o ingresa manualmente"
+                                    class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    readonly
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Color</label>
+                                <input 
+                                    type="text" 
+                                    id="lanzamiento-color" 
+                                    placeholder="Se autocompleta o ingresa manualmente"
+                                    class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    readonly
+                                >
+                            </div>
+                        </div>
+                        
+                        <!-- Indicador de estado de validación -->
+                        <div id="lanzamiento-status" class="hidden mb-3 p-2 rounded text-sm"></div>
+                        
+                        <div class="flex gap-2">
+                            <button 
+                                onclick="agregarLanzamiento()" 
+                                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
+                            >
+                                ➕ Agregar Lanzamiento
+                            </button>
+                            <button 
+                                onclick="limpiarFormularioLanzamiento()" 
+                                class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                            >
+                                🔄 Limpiar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de lanzamientos agregados -->
+                    <div id="lista-lanzamientos-container" class="hidden">
+                        <h4 class="font-semibold mb-2 text-gray-700">📋 Productos para Lanzamiento:</h4>
+                        <div class="border rounded max-h-60 overflow-y-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100 sticky top-0">
+                                    <tr>
+                                        <th class="p-2 text-left">Código</th>
+                                        <th class="p-2 text-left">Marca</th>
+                                        <th class="p-2 text-left">Color</th>
+                                        <th class="p-2 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-lanzamientos">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                            💡 Estos productos se agregarán a <strong>todas las tiendas</strong> en el reporte de reabastecimiento
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="generarReabastecimiento()" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">
+                        👁️ Ver Preview
+                    </button>
+                    <button onclick="generarReabastecimientoDirecto()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700">
+                        📥 Exportar Directo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Redistribución -->
+        <div id="module-redistribucion" class="module-content hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h3 class="text-xl font-semibold mb-4">⇄ Configuración de Redistribución</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Días de Análisis</label>
+                        <input type="number" id="diasRedist" value="30" min="7" max="365" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Ventas Mínimas</label>
+                        <input type="number" id="ventasMinRedist" value="1" min="1" max="50" class="w-full p-2 border rounded">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Tienda Origen (Opcional)</label>
+                        <input type="text" id="tiendaOrigen" placeholder="Dejar vacío para todas" class="w-full p-2 border rounded">
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="generarRedistribucion()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">
+                        👁️ Ver Preview
+                    </button>
+                    <button onclick="generarRedistribucionDirecto()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700">
+                        📥 Exportar Directo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Reportes -->
+        <div id="module-reportes" class="module-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer" onclick="generarReporte('existencias')">
+                    <h4 class="font-semibold text-lg mb-3">Existencias por Tienda 📦</h4>
+                    <p class="text-sm text-gray-600">Consolidado de inventario actual</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer" onclick="generarReporte('faltantes')">
+                    <h4 class="font-semibold text-lg mb-3">Faltantes por Tienda ⚠️</h4>
+                    <p class="text-sm text-gray-600">Productos sin stock con demanda</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Consulta de Producto -->
+        <div id="module-consulta" class="module-content hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h3 class="text-xl font-semibold mb-4">🔍 Consulta de Producto</h3>
+                
+                <!-- Buscador -->
+                <div class="flex gap-4 mb-6">
+                    <div class="flex-1 relative">
+                        <input 
+                            type="text" 
+                            id="buscarProducto" 
+                            placeholder="Escribe código de barras o nombre del producto..."
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            autocomplete="off"
+                        >
+                        <div id="sugerenciasProducto" class="absolute bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto z-50 w-full"></div>
+                    </div>
+                    <button onclick="buscarProductoPorCodigo()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                        Buscar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contenedor de Resultados -->
+            <div id="resultadoConsulta" class="hidden">
+                <!-- Información General -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                        <p class="text-sm text-blue-600 font-medium">Stock Total</p>
+                        <p id="cons-stock-total" class="text-2xl font-bold text-blue-700">-</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                        <p class="text-sm text-green-600 font-medium">Stock Tiendas</p>
+                        <p id="cons-stock-tiendas" class="text-2xl font-bold text-green-700">-</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
+                        <p class="text-sm text-orange-600 font-medium">Stock Bodega</p>
+                        <p id="cons-stock-bodega" class="text-2xl font-bold text-orange-700">-</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                        <p class="text-sm text-purple-600 font-medium">Ventas 30d</p>
+                        <p id="cons-ventas-30" class="text-2xl font-bold text-purple-700">-</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Información del Producto -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h4 class="text-lg font-semibold mb-4">📦 Información General</h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between p-2 bg-gray-50 rounded">
+                                <span class="font-medium">Código:</span>
+                                <span id="cons-codigo" class="text-gray-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-gray-50 rounded">
+                                <span class="font-medium">Marca:</span>
+                                <span id="cons-marca" class="text-gray-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-gray-50 rounded">
+                                <span class="font-medium">Color:</span>
+                                <span id="cons-color" class="text-gray-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-gray-50 rounded">
+                                <span class="font-medium">Valor Inventario:</span>
+                                <span id="cons-valor" class="text-gray-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-gray-50 rounded">
+                                <span class="font-medium">Última Venta:</span>
+                                <span id="cons-ultima-venta" class="text-gray-700">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análisis de Ventas -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h4 class="text-lg font-semibold mb-4">📈 Análisis de Ventas</h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between p-2 bg-blue-50 rounded">
+                                <span class="font-medium">Últimos 30 días:</span>
+                                <span id="cons-v30" class="font-bold text-blue-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-blue-50 rounded">
+                                <span class="font-medium">Últimos 60 días:</span>
+                                <span id="cons-v60" class="font-bold text-blue-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-blue-50 rounded">
+                                <span class="font-medium">Últimos 90 días:</span>
+                                <span id="cons-v90" class="font-bold text-blue-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-green-50 rounded">
+                                <span class="font-medium">Velocidad:</span>
+                                <span id="cons-velocidad" class="font-bold text-green-700">-</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-orange-50 rounded">
+                                <span class="font-medium">Días para agotar:</span>
+                                <span id="cons-dias-agotar" class="font-bold text-orange-700">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recomendación -->
+                <div id="cons-recomendacion" class="p-4 rounded-lg mb-6 text-center text-lg font-semibold">
+                    <!-- Se llena dinámicamente -->
+                </div>
+
+                <!-- Distribución por Tienda -->
+                <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h4 class="text-lg font-semibold mb-4">🏪 Distribución por Tienda</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-3 text-left">Tienda</th>
+                                    <th class="p-3 text-left">Región</th>
+                                    <th class="p-3 text-right">Stock Actual</th>
+                                    <th class="p-3 text-right">Ventas 30d</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cons-tabla-distribucion">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Ventas -->
+                <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h4 class="text-lg font-semibold mb-4">📊 Ventas Últimos 30 Días</h4>
+                    <canvas id="graficoVentasProducto" height="80"></canvas>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Tiendas sin el producto -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h4 class="text-lg font-semibold mb-4">📍 Tiendas sin el Producto</h4>
+                        <div id="cons-tiendas-sin" class="space-y-2 max-h-60 overflow-y-auto">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Historial de Movimientos -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h4 class="text-lg font-semibold mb-4">🔄 Últimos Movimientos</h4>
+                        <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-gray-100 sticky top-0">
+                                    <tr>
+                                        <th class="p-2 text-left">Fecha</th>
+                                        <th class="p-2 text-left">Tienda</th>
+                                        <th class="p-2 text-right">Cantidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cons-tabla-historial">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensaje cuando no hay resultados -->
+            <div id="sinResultadoConsulta" class="bg-gray-50 p-12 rounded-lg text-center hidden">
+                <div class="text-6xl mb-4">🔍</div>
+                <p class="text-xl text-gray-600 mb-2">Busca un producto para ver su información detallada</p>
+                <p class="text-sm text-gray-500">Escribe el código de barras o el nombre del producto</p>
+            </div>
+        </div>
+
+        <!-- Módulo de Análisis por Marca -->
+        <div id="module-analisis-marca" class="module-content hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h3 class="text-xl font-semibold mb-4">🔍 Análisis por Marca</h3>
+                
+                <!-- Buscador -->
+                <div class="flex gap-4 mb-6">
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            id="buscarMarca" 
+                            placeholder="Escribe el nombre de la marca..."
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            autocomplete="off"
+                        >
+                    </div>
+                    <button onclick="buscarPorMarcaMarca()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                        Analizar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contenedor de Resultados -->
+            <div id="resultadoMarca" class="hidden">
+                <!-- Pestañas -->
+                <div class="flex border-b mb-4">
+                    <button onclick="cambiarVistaMarca('top10')" class="px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600" id="tab-top10">
+                        📦 Top 10 Productos
+                    </button>
+                    <button onclick="cambiarVistaMarca('tiendas')" class="px-4 py-2 font-medium text-gray-600" id="tab-tiendas">
+                        🏪 Análisis por Tienda
+                    </button>
+                </div>
+
+                <!-- Información General -->
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                        <p class="text-sm text-blue-600 font-medium">Marca</p>
+                        <p id="marca-nombre" class="text-2xl font-bold text-blue-700">-</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                        <p class="text-sm text-green-600 font-medium">Total Productos</p>
+                        <p id="marca-total-productos" class="text-2xl font-bold text-green-700">-</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                        <p class="text-sm text-purple-600 font-medium">Top 10 Vendidos</p>
+                        <p id="marca-con-venta" class="text-2xl font-bold text-purple-700">-</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
+                        <p class="text-sm text-orange-600 font-medium">Tiendas Faltantes</p>
+                        <p id="marca-sin-venta" class="text-2xl font-bold text-orange-700">-</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                        <p class="text-sm text-red-600 font-medium">Oportunidades</p>
+                        <p id="marca-porcentaje-rotacion" class="text-2xl font-bold text-red-700">-</p>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                        <p class="text-sm text-yellow-600 font-medium">Cobertura</p>
+                        <p id="marca-tiendas-cobertura" class="text-2xl font-bold text-yellow-700">-</p>
+                    </div>
+                </div>
+
+                <!-- Recomendaciones -->
+                <div id="marca-recomendaciones" class="p-4 rounded-lg mb-6 text-center text-lg font-semibold space-y-2"></div>
+
+                <!-- Vista: Top 10 Productos -->
+                <div id="vista-top10" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h4 class="text-lg font-semibold mb-4">📦 Top 10 Productos de la Marca</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 text-left">Código</th>
+                                        <th class="p-3 text-left">Color</th>
+                                        <th class="p-3 text-right">Ventas 30d</th>
+                                        <th class="p-3 text-right">Tiendas con Prod.</th>
+                                        <th class="p-3 text-right">Tiendas Faltantes</th>
+                                        <th class="p-3 text-right">Stock Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="marca-tabla-top10">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vista: Análisis por Tienda -->
+                <div id="vista-tiendas" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h4 class="text-lg font-semibold mb-4">🏪 Análisis por Tienda (Top 10)</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 text-left">Tienda</th>
+                                        <th class="p-3 text-left">Región</th>
+                                        <th class="p-3 text-right">Productos Top 10</th>
+                                        <th class="p-3 text-right">Productos Faltantes</th>
+                                        <th class="p-3 text-right">Ventas Top 10</th>
+                                        <th class="p-3 text-right">Stock Top 10</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="marca-tabla-tiendas">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensaje cuando no hay resultados -->
+            <div id="sinResultadoMarca" class="bg-gray-50 p-12 rounded-lg text-center">
+                <div class="text-6xl mb-4">🔍</div>
+                <p class="text-xl text-gray-600 mb-2">Busca una marca para ver su análisis detallado</p>
+                <p class="text-sm text-gray-500">Escribe el nombre de la marca en el campo superior</p>
+            </div>
+        </div>
+
+        <!-- Módulo de Configuración -->
+        <div id="module-configuracion" class="module-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Stock Mínimo -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">⚙️ Stock Mínimo</h3>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-sm">Fijo Especial</span>
+                                <input id="stock_fijo_especial" type="number" class="w-20 p-1 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-sm">Fijo Normal</span>
+                                <input id="stock_fijo_normal" type="number" class="w-20 p-1 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-sm">Multimarca</span>
+                                <input id="stock_multimarca" type="number" class="w-20 p-1 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-sm">JGL</span>
+                                <input id="stock_jgl" type="number" class="w-20 p-1 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-sm">JGM</span>
+                                <input id="stock_jgm" type="number" class="w-20 p-1 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-sm">Default</span>
+                                <input id="stock_default" type="number" class="w-20 p-1 border rounded text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="guardarStockMinimo()" class="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                        💾 Guardar Configuración
+                    </button>
+                </div>
+
+                <!-- Referencias Fijas -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">🏷️ Referencias Fijas</h3>
+                    <div class="mb-3 flex gap-2">
+                        <input type="text" id="nuevaRefFija" placeholder="Código de barras" class="flex-1 p-2 border rounded text-sm">
+                        <button onclick="agregarReferencia()" class="bg-green-600 text-white px-4 rounded hover:bg-green-700">
+                            ➕
+                        </button>
+                    </div>
+                    <div class="border rounded max-h-60 overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="p-2 text-left">Código</th>
+                                    <th class="p-2 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaRefFijas">
+                                <tr><td colspan="2" class="p-3 text-center text-gray-500">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Códigos Excluidos -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">🚫 Códigos Excluidos</h3>
+                    <div class="mb-3 flex gap-2">
+                        <input type="text" id="nuevoExcluido" placeholder="Código de barras" class="flex-1 p-2 border rounded text-sm">
+                        <button onclick="agregarExcluido()" class="bg-red-600 text-white px-4 rounded hover:bg-red-700">
+                            ➕
+                        </button>
+                    </div>
+                    <div class="border rounded max-h-60 overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="p-2 text-left">Código</th>
+                                    <th class="p-2 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaExcluidos">
+                                <tr><td colspan="2" class="p-3 text-center text-gray-500">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gestión de Tiendas Unificada -->
+                <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">🏪 Gestión de Tiendas</h3>
+                        <button onclick="abrirModalNuevaTienda()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
+                            ➕ Nueva Tienda
+                        </button>
+                    </div>
+                    
+                    <!-- Estadísticas -->
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="p-3 bg-blue-50 rounded flex justify-between items-center">
+                            <span class="text-sm font-medium">Total tiendas</span>
+                            <span class="font-bold text-blue-600 text-xl" id="stat-tiendas-config">-</span>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded flex justify-between items-center">
+                            <span class="text-sm font-medium">Tiendas fijas</span>
+                            <span class="font-bold text-green-600 text-xl" id="stat-tiendas-fijas">-</span>
+                        </div>
+                        <div class="p-3 bg-purple-50 rounded flex justify-between items-center">
+                            <span class="text-sm font-medium">Regiones</span>
+                            <span class="font-bold text-purple-600 text-xl" id="stat-regiones">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabla de Tiendas -->
+                    <div class="border rounded max-h-96 overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="p-2 text-left">Nombre</th>
+                                    <th class="p-2 text-left">Nombre Original</th>
+                                    <th class="p-2 text-left">Región</th>
+                                    <th class="p-2 text-center">Fija</th>
+                                    <th class="p-2 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaTiendas">
+                                <tr><td colspan="5" class="p-3 text-center text-gray-500">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- Modal para Agregar/Editar Tienda -->
+                <div id="modalTienda" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                    <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
+                        <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                            <h3 id="modalTiendaTitulo" class="text-xl font-bold">Agregar Tienda</h3>
+                            <button onclick="cerrarModalTienda()" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">
+                                        Nombre Original (Sistema) <span class="text-red-500">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        id="tienda-raw-name" 
+                                        placeholder="Ej: TIENDA_PRINCIPAL_01"
+                                        class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    >
+                                    <p class="text-xs text-gray-500 mt-1">Nombre exacto como aparece en el sistema</p>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">
+                                        Nombre Limpio <span class="text-red-500">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        id="tienda-clean-name" 
+                                        placeholder="Ej: Tienda Principal"
+                                        class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    >
+                                    <p class="text-xs text-gray-500 mt-1">Nombre que se mostrará en reportes</p>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Región</label>
+                                    <input 
+                                        type="text" 
+                                        id="tienda-region" 
+                                        placeholder="Ej: Norte, Sur, Centro"
+                                        class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    >
+                                </div>
+                                
+                                <div>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="tienda-fija" class="w-4 h-4">
+                                        <span class="text-sm font-medium">Tienda Fija (siempre incluir en distribución)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-3 mt-6">
+                                <button 
+                                    onclick="guardarTienda()" 
+                                    class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold"
+                                >
+                                    💾 Guardar
+                                </button>
+                                <button 
+                                    onclick="cerrarModalTienda()" 
+                                    class="flex-1 bg-gray-300 text-gray-700 py-2 rounded hover:bg-gray-400 font-semibold"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+        <!-- Módulo Analytics -->
+        <div id="module-analytics" class="module-content hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-4">📊 Analytics</h3>
+                <p class="text-gray-600">Módulo en desarrollo...</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gray-800 text-white p-6 mt-12">
+        <div class="container mx-auto text-center">
+            <p>© 2024 JAGI ERP - Proyecto de Grado</p>
+            <p class="text-sm text-gray-400 mt-2">Técnico en Programación de Aplicaciones para la Nube</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../static/js/config.js"></script>
+    <script src="../static/js/app.js"></script>
+</body>
+</html>
