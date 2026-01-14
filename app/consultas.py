@@ -9,6 +9,7 @@ from app.services.analisis_marca_service import get_analisis_marca
 from app.services.producto_service import get_consulta_producto
 from app.services.existencias_service import get_existencias_por_tienda
 from app.services.movimiento_service import get_movimiento, get_resumen_movimiento
+from app.services.faltantes_service import get_faltantes
 from app.database import (
     get_connection,
     date_subtract_days,
@@ -483,66 +484,3 @@ def get_redistribucion_regional(dias=30, ventas_min=1, tienda_origen=None):
     print("📂 Archivo: redistribucion_regional.xlsx")
 
     return final
-
-#------------------------------------------------------ OTRAS FUNCIONES ------------------------------------------------------
-
-def get_faltantes(dias=90):
-    with get_connection() as conn:
-        fecha_limite = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
-        codigos_excluidos = pd.read_sql("SELECT cod_barras FROM codigos_excluidos", conn)["cod_barras"].astype(str).tolist()
-
-        # Ventas recientes
-        fecha_desde_exp = date_subtract_days(dias)
-        fecha_col_convertida = date_format_convert('h.f_sistema')
-
-        query_ventas = f"""
-            SELECT 
-                h.c_barra,
-                h.d_marca,
-                h.d_almacen,
-                SUM(h.cn_venta) AS ventas_periodo
-            FROM ventas_historico_raw h
-            WHERE {fecha_col_convertida} >= {fecha_desde_exp}
-            GROUP BY h.c_barra, h.d_marca, h.d_almacen
-            HAVING SUM(h.cn_venta) > 0
-        """
-        ventas = pd.read_sql(query_ventas, conn)
-
-        # Existencias
-        existencias = pd.read_sql("""
-            SELECT c_barra, d_almacen, saldo_disponible
-            FROM ventas_saldos_raw
-        """, conn)
-
-        # Enlazar con config_tiendas (solo una vez)
-        tiendas = pd.read_sql("SELECT raw_name, clean_name FROM config_tiendas", conn)
-
-        ventas = ventas.merge(tiendas, left_on="d_almacen", right_on="raw_name", how="left")
-        existencias = existencias.merge(tiendas, left_on="d_almacen", right_on="raw_name", how="left")
-
-        ventas["tienda"] = ventas["clean_name"].fillna(ventas["d_almacen"])
-        existencias["tienda"] = existencias["clean_name"].fillna(existencias["d_almacen"])
-
-        # Limpiar bodegas y excluidos
-        ventas = ventas[~ventas["tienda"].str.contains("BODEGA", case=False, na=False)]
-        existencias = existencias[~existencias["tienda"].str.contains("BODEGA", case=False, na=False)]
-        ventas = ventas[~ventas["c_barra"].isin(codigos_excluidos)]
-        existencias = existencias[~existencias["c_barra"].isin(codigos_excluidos)]
-
-        tiendas_activas = existencias["tienda"].drop_duplicates().tolist()
-        productos = ventas[["c_barra", "d_marca"]].drop_duplicates()
-
-        # Generar faltantes
-        faltantes = []
-        for _, prod in productos.iterrows():
-            c_barra, d_marca = prod["c_barra"], prod["d_marca"]
-            tiendas_con_stock = existencias.loc[existencias["c_barra"] == c_barra, "tienda"].unique().tolist()
-            for t in tiendas_activas:
-                if t not in tiendas_con_stock:
-                    faltantes.append({
-                        "c_barra": c_barra,
-                        "d_marca": d_marca,
-                        "tienda_faltante": t
-                    })
-
-        return pd.DataFrame(faltantes).sort_values(by=["d_marca", "tienda_faltante"])
