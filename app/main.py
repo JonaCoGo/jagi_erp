@@ -515,7 +515,7 @@ async def preview_reabastecimiento(params: ReabastecimientoParams):
         
         datos = df.to_dict(orient='records')
         return JSONResponse({"success": True, "total": len(datos), "datos": datos[:10000]})
-    except Exception as e:
+    except Exception as e: 
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/exportar-preview-personalizado")

@@ -1,5 +1,7 @@
 # consultas.py
 
+
+from app.database import DB_NAME
 from app.services import (
     get_analisis_marca,
     get_consulta_producto,
