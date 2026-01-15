@@ -1,10 +1,12 @@
 # consultas.py
 
-
-from app.services.analisis_marca_service import get_analisis_marca
-from app.services.producto_service import get_consulta_producto
-from app.services.existencias_service import get_existencias_por_tienda
-from app.services.movimiento_service import get_movimiento, get_resumen_movimiento
-from app.services.faltantes_service import get_faltantes
-from app.services.reabastecimiento_service import get_reabastecimiento_avanzado
-from app.services.redistribucion_service import get_redistribucion_regional
+from app.services import (
+    get_analisis_marca,
+    get_consulta_producto,
+    get_existencias_por_tienda,
+    get_movimiento,
+    get_resumen_movimiento,
+    get_faltantes,
+    get_reabastecimiento_avanzado,
+    get_redistribucion_regional
+)
