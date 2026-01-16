@@ -1,93 +1,135 @@
-JAGI ERP
+# 🏢 JAGI ERP - Sistema de Gestión de Inventarios
 
-Sistema ERP desarrollado en Python con interfaz web, enfocado en análisis de inventario, ventas y apoyo a la toma de decisiones operativas.
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Este proyecto nace como una iniciativa personal con fines educativos y de práctica profesional. 
-Ha sido utilizado como apoyo en un entorno académico (SENA) y en un contexto laboral, sin incluir información sensible ni datos reales de la empresa.
+> Sistema ERP desarrollado para optimizar la gestión de inventarios, análisis de ventas y toma de decisiones operativas en retail.
 
-🧠 Arquitectura general
+---
 
-Backend: Python + FastAPI
+## 📋 Características
 
-Base de datos: SQLite (local)
+- ✅ **Carga automática de datos** desde archivos CSV
+- 📊 **Dashboard interactivo** con estadísticas en tiempo real
+- 📦 **Análisis de inventario** por tienda y región
+- 🔄 **Sugerencias de reabastecimiento** basadas en ventas históricas
+- 🏷️ **Análisis por marca** (Top 10, cobertura, faltantes)
+- 📈 **Reportes Excel** automatizados y personalizables
+- 🔍 **Consulta de productos** con historial de movimientos
 
-Frontend: HTML, CSS y JavaScript
+---
 
-Testing: Pytest
+## 🚀 Instalación
 
-Editor recomendado: VS Code
+### Prerequisitos
 
-La base de datos no se versiona. Se genera localmente mediante scripts incluidos en este repositorio.
+- Python 3.11 o superior
+- pip (gestor de paquetes de Python)
 
-🚀 Funcionalidades principales
+### Pasos
 
-Análisis de inventario y ventas
+1. **Clonar el repositorio**
+```bash
+git clone https://github.com/JonaCoGo/jagi_erp.git
+cd jagi_erp
+```
 
-Reportes Excel automatizados
-
-Análisis por marca (Top 10, faltantes, cobertura por tienda)
-
-Dashboard web para visualización
-
-API REST para consumo del frontend
-
-Pruebas automatizadas para evitar regresiones
-
-🗂️ Estructura del proyecto
-app/
-│── main.py              # API FastAPI
-│── consultas.py         # Lógica de consultas
-│── database.py          # Conexión y helpers de BD
-│
-├── cli/                 # CLI opcional
-├── reports/             # Exportación a Excel
-├── services/            # Capa de servicios (en evolución)
-├── repositories/        # Acceso a datos (en evolución)
-│
-data/
-│── inputs/              # Archivos de carga (no sensibles)
-│── reports/             # Reportes generados
-│
-scripts/
-│── create_schema.py     # Crear esquema de BD
-│── seed_data.py         # Datos ficticios
-│── inspect_BD.py        # Inspección de BD
-│
-test/
-│── test_analisis_marca.py
-│── test_api_analisis_marca.py
-│── test_database.py
-
-🧪 Pruebas
-
-Ejecutar todas las pruebas:
-
-pytest
-
-Las pruebas validan:
-
-Contratos de datos esperados por el frontend
-
-Estructura de respuestas de las consultas
-
-Conexión a la base de datos
-
-Endpoints de la API
-
-▶️ Ejecución local
-1. Crear entorno virtual
+2. **Crear entorno virtual**
+```bash
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
+```
 
-2. Instalar dependencias
+3. **Instalar dependencias**
+```bash
 pip install -r requirements.txt
+```
 
-3. Crear base de datos local
+4. **Crear base de datos**
+```bash
 python scripts/create_schema.py
 python scripts/seed_data.py
+```
 
-4. Levantar la API
+5. **Ejecutar servidor**
+```bash
 uvicorn app.main:app --reload
+```
 
-5. Abrir en el navegador
+6. **Abrir en navegador**
+```
 http://127.0.0.1:8000
+```
+
+---
+
+## 🏗️ Arquitectura
+```
+JAGI_ERP/
+├── app/
+│   ├── main.py              # API FastAPI
+│   ├── services/            # Lógica de negocio
+│   ├── repositories/        # Acceso a datos
+│   └── reports/             # Generación de reportes
+├── static/                  # Frontend (HTML/CSS/JS)
+├── scripts/                 # Utilidades BD
+└── test/                    # Pruebas automatizadas
+```
+
+---
+
+## 🧪 Testing
+```bash
+pytest
+```
+
+Cobertura actual: ~40% (en mejora continua)
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Componente | Tecnología |
+|-----------|-----------|
+| Backend | FastAPI + Python 3.11 |
+| Base de datos | SQLite (desarrollo) |
+| Frontend | HTML5 + TailwindCSS + Vanilla JS |
+| Testing | Pytest |
+| Reportes | Pandas + OpenPyXL |
+
+---
+
+## 📖 Documentación API
+
+Una vez ejecutado el servidor, visita:
+
+- **Swagger UI**: http://127.0.0.1:8000/docs
+- **ReDoc**: http://127.0.0.1:8000/redoc
+
+---
+
+## 🤝 Contribuciones
+
+Ver [CONTRIBUTING.md](CONTRIBUTING.md) para las convenciones de commits y flujo de trabajo.
+
+---
+
+## 📝 Licencia
+
+Este proyecto es de uso educativo y profesional.
+
+---
+
+## 👨‍💻 Autor
+
+**Jonathan Cortés**  
+Técnico en Programación de Aplicaciones - SENA  
+[GitHub](https://github.com/JonaCoGo) | [LinkedIn](#)
+
+---
+
+## 📌 Estado del Proyecto
+
+🚧 **En desarrollo activo** - Se aceptan sugerencias y mejoras
