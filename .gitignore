@@ -41,7 +41,6 @@ jagi_mahalo.db
 # ======================
 # Archivos de datos
 # ======================
-data/
 *.csv
 *.xlsx
 *.xls
