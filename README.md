@@ -110,6 +110,67 @@ Una vez ejecutado el servidor, visita:
 
 ---
 
+## ⚙️ Configuración
+
+### Variables de Entorno
+
+Este proyecto usa variables de entorno para configuración sensible.
+
+#### Configuración Inicial
+
+1. **Copia el archivo de ejemplo:**
+```bash
+   # Windows
+   copy .env.example .env
+   
+   # Linux/Mac
+   cp .env.example .env
+```
+
+2. **Edita `.env` con tus valores:**
+```bash
+   # Mínimo requerido para desarrollo
+   DB_TYPE=sqlite
+   DB_PATH=data/jagi_mahalo.db
+```
+
+3. **Reinicia la aplicación:**
+```bash
+   uvicorn app.main:app --reload
+```
+
+### Configuración para Producción
+
+#### PostgreSQL
+```bash
+# .env en servidor de producción
+ENVIRONMENT=production
+DEBUG=False
+LOG_LEVEL=INFO
+
+DB_TYPE=postgresql
+DB_HOST=tu-servidor.com
+DB_PORT=5432
+DB_NAME=jagi_mahalo
+DB_USER=admin
+DB_PASSWORD=contraseña_segura_generada
+```
+
+#### Seguridad
+
+⚠️ **IMPORTANTE:**
+- El archivo `.env` **NUNCA** se sube a Git
+- Usa contraseñas seguras (16+ caracteres)
+- En producción, usa variables de entorno del servidor (no archivo `.env`)
+
+#### Validación Automática
+
+La aplicación valida la configuración al iniciar:
+- ✅ Falla rápido si falta `.env`
+- ✅ Verifica que campos requeridos estén presentes
+- ✅ Previene contraseñas inseguras
+- ✅ Bloquea `DEBUG=True` en producción
+
 ## 🤝 Contribuciones
 
 Ver [CONTRIBUTING.md](CONTRIBUTING.md) para las convenciones de commits y flujo de trabajo.
