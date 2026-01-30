@@ -1,4 +1,4 @@
-# main.py
+# app/main.py
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +8,6 @@ from typing import List, Optional
 from urllib.parse import unquote
 import os
 
-# Inicializar sistema de logging (debe ser lo primero)
 from app.logging_config import setup_logging
 setup_logging()
 
@@ -28,6 +27,12 @@ from app.consultas import(
 )
 from app.cargar_csv import resetear_y_cargar
 from app.reports.excel_exporter import exportar_excel_formateado
+
+from app.schemas import (
+    ReabastecimientoCalculoRequest,
+    ReabastecimientoResponse,
+    ReabastecimientoItem,
+)
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -297,75 +302,113 @@ async def actualizar_inventario_fisico(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===== REPORTES =====
-@app.post("/reabastecimiento")
-async def generar_reabastecimiento(params: ReabastecimientoExportParams):
+@app.post("/reabastecimiento", response_model=ReabastecimientoResponse)
+async def calcular_reabastecimiento(
+    request: ReabastecimientoCalculoRequest
+) -> ReabastecimientoResponse:
     """
-    Genera reporte de reabastecimiento con filtros opcionales.
-    Compatible con versión anterior (backward compatible).
+    Calcula necesidades de reabastecimiento basado en ventas y stock.
+    
+    Parámetros validados automáticamente:
+    - dias_venta: 1-90 días
+    - dias_stock: 1-180 días (debe ser >= dias_venta)
+    - fechas: formato DD/MM/YYYY válido
+    - códigos: normalizados a uppercase
+    
+    Returns:
+        ReabastecimientoResponse con items calculados y resumen
     """
+    import logging
+    from app.services.reabastecimiento_service import get_reabastecimiento_avanzado
+    
+    logger = logging.getLogger(__name__)
+    
     try:
-        # Convertir nuevos_codigos de Pydantic a dict si existen
-        nuevos_codigos_dict = None
-        if params.nuevos_codigos:
-            nuevos_codigos_dict = [
-                {
-                    "c_barra": p.c_barra,
-                    "d_marca": p.d_marca,
-                    "color": p.color
-                }
-                for p in params.nuevos_codigos
-            ]
+        logger.info(
+            f"Calculando reabastecimiento | "
+            f"Días venta: {request.dias_venta} | "
+            f"Días stock: {request.dias_stock} | "
+            f"Período: {request.fecha_inicio} - {request.fecha_fin}"
+        )
         
-        # Generar reporte completo
+        # Llamar al servicio (tu lógica existente)
         df = get_reabastecimiento_avanzado(
-            dias_reab=params.dias_reab,
-            dias_exp=params.dias_exp,
-            ventas_min_exp=params.ventas_min_exp,
-            solo_con_ventas=params.solo_con_ventas,
-            nuevos_codigos=nuevos_codigos_dict
+            dias_reab=request.dias_venta,
+            dias_exp=request.dias_stock,
+            excluir_sin_movimiento=not request.incluir_sin_movimiento,
+            incluir_fijos=True,
+            guardar_debug_csv=False
         )
         
-        if "region" in df.columns:
-            df = df.drop(columns=["region"])
-        
-        # ← APLICAR FILTROS (solo si existen)
-        if params.tiendas_filtro and len(params.tiendas_filtro) > 0:
-            df = df[df['tienda'].isin(params.tiendas_filtro)]
-            logging.info(f"Filtro de tiendas aplicado: {len(params.tiendas_filtro)} tiendas")
-        
-        if params.observaciones_filtro and len(params.observaciones_filtro) > 0:
-            df = df[df['observacion'].isin(params.observaciones_filtro)]
-            logging.info(f"Filtro de observaciones aplicado: {params.observaciones_filtro}")
-        
-        # ← FILTRAR COLUMNAS (solo si existen)
-        if params.columnas_seleccionadas and len(params.columnas_seleccionadas) > 0:
-            columnas_validas = [col for col in params.columnas_seleccionadas if col in df.columns]
-            if columnas_validas:
-                df = df[columnas_validas]
-                logging.info(f"Filtro de columnas aplicado: {len(columnas_validas)} columnas")
-        
-        # Validación: asegurarse de que hay datos para exportar
-        if df.empty:
-            raise HTTPException(
-                status_code=400, 
-                detail="No hay datos para exportar con los filtros aplicados"
+        # Convertir DataFrame a lista de items
+        items = []
+        for _, row in df.iterrows():
+            # Determinar prioridad basada en días de stock
+            if row.get('dias_stock_actual', 0) < 3:
+                prioridad = "ALTA"
+            elif row.get('dias_stock_actual', 0) < 7:
+                prioridad = "MEDIA"
+            else:
+                prioridad = "BAJA"
+            
+            item = ReabastecimientoItem(
+                tienda=str(row.get('tienda', '')),
+                producto=str(row.get('producto', '')),
+                descripcion=str(row.get('descripcion', '')),
+                stock_actual=int(row.get('stock_actual', 0)),
+                venta_promedio=float(row.get('venta_promedio', 0)),
+                dias_stock_actual=float(row.get('dias_stock_actual', 0)),
+                necesidad=int(row.get('necesidad', 0)),
+                prioridad=prioridad
             )
+            items.append(item)
         
-        archivo = "reabastecimiento_jagi.xlsx"
-        exportar_excel_formateado(df, archivo, "Reabastecimiento")
+        # Calcular estadísticas
+        items_con_necesidad = len([i for i in items if i.necesidad > 0])
+        total_unidades = sum(i.necesidad for i in items)
         
-        logging.info(f"Reporte generado: {len(df)} registros")
+        # Resumen por tienda
+        resumen_tiendas = {}
+        for item in items:
+            if item.tienda not in resumen_tiendas:
+                resumen_tiendas[item.tienda] = {
+                    "total_productos": 0,
+                    "productos_con_necesidad": 0,
+                    "unidades_necesarias": 0
+                }
+            resumen_tiendas[item.tienda]["total_productos"] += 1
+            if item.necesidad > 0:
+                resumen_tiendas[item.tienda]["productos_con_necesidad"] += 1
+                resumen_tiendas[item.tienda]["unidades_necesarias"] += item.necesidad
         
-        return FileResponse(
-            archivo, 
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-            filename=archivo
+        logger.info(
+            f"Reabastecimiento calculado | "
+            f"Total items: {len(items)} | "
+            f"Con necesidad: {items_con_necesidad} | "
+            f"Unidades: {total_unidades}"
         )
-    except HTTPException:
-        raise
+        
+        return ReabastecimientoResponse(
+            success=True,
+            message=f"Reabastecimiento calculado: {items_con_necesidad} productos necesitan reposición",
+            total_items=len(items),
+            items_con_necesidad=items_con_necesidad,
+            total_unidades_necesarias=total_unidades,
+            parametros={
+                "dias_venta": request.dias_venta,
+                "dias_stock": request.dias_stock,
+                "fecha_inicio": request.fecha_inicio,
+                "fecha_fin": request.fecha_fin,
+                "tiendas": request.tiendas,
+                "productos": request.productos,
+            },
+            items=items,
+            resumen_por_tienda=resumen_tiendas
+        )
+        
     except Exception as e:
-        logging.error(f"Error en reabastecimiento: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error calculando reabastecimiento: {str(e)}", exc_info=True)
+        raise
     
 @app.post("/reabastecimiento/columnas-disponibles")
 async def obtener_columnas_reabastecimiento(params: ReabastecimientoParams):
